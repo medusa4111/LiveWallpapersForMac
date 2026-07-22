@@ -16,7 +16,9 @@ Live video, GIF and image wallpapers for macOS. The app runs from the menu bar a
 4. При первом запуске macOS может предупредить, что разработчик не подтверждён. Нажмите по приложению правой кнопкой мыши, выберите «Открыть», затем подтвердите запуск. Если кнопки нет, используйте «Системные настройки» → «Конфиденциальность и безопасность» → «Всё равно открыть».
 5. Разрешите приложению запрошенный доступ в настройках macOS.
 
-Для обновления откройте новый DMG и замените приложение в папке «Программы». Не переименовывайте приложение и не меняйте путь установки `/Applications/Live Wallpapers for Mac.app`: это важно для сохранения разрешений macOS.
+Версии до `0.2.0` требуют одного ручного обновления через DMG. Начиная с `0.2.0`, пункт «Проверить обновления…» скачивает подписанный DMG, проверяет SHA-256, Bundle ID, executable и designated requirement, безопасно заменяет приложение и перезапускает его автоматически.
+
+Не переименовывайте приложение и не меняйте путь установки `/Applications/Live Wallpapers for Mac.app`: автообновление и сохранение разрешений macOS зависят от постоянного пути и подписи.
 
 Подробная инструкция: [INSTALL_RU.txt](INSTALL_RU.txt).
 
@@ -28,7 +30,9 @@ Live video, GIF and image wallpapers for macOS. The app runs from the menu bar a
 4. On first launch, macOS may warn that the developer cannot be verified. Control-click the app, choose Open, then confirm. If that option is unavailable, use System Settings → Privacy & Security → Open Anyway.
 5. Grant the requested macOS permissions.
 
-To update, open the new DMG and replace the app in Applications. Do not rename the app or change its installation path, `/Applications/Live Wallpapers for Mac.app`; this is important for preserving macOS permissions.
+Versions earlier than `0.2.0` require one manual DMG update. Starting with `0.2.0`, Check for Updates downloads the signed DMG, verifies its SHA-256, Bundle ID, executable and designated requirement, safely replaces the app and relaunches it automatically.
+
+Do not rename the app or change `/Applications/Live Wallpapers for Mac.app`; automatic updates and preservation of macOS permissions depend on the stable path and signature.
 
 Detailed instructions: [INSTALL_EN.txt](INSTALL_EN.txt).
 
@@ -39,7 +43,7 @@ Updates are distributed through [GitHub Releases](https://github.com/medusa4111/
 Build signed ZIP and DMG packages:
 
 ```bash
-./script/package_release.sh 0.1.0 1
+./script/package_release.sh 0.2.0 3
 ```
 
 The output is written to `dist/release/`:
@@ -52,8 +56,8 @@ The output is written to `dist/release/`:
 Verify or install a ZIP update:
 
 ```bash
-./script/install_update.sh --verify-only "dist/release/Live Wallpapers for Mac-0.1.0.zip"
-./script/install_update.sh "dist/release/Live Wallpapers for Mac-0.1.0.zip"
+./script/install_update.sh --verify-only "dist/release/Live Wallpapers for Mac-0.2.0.zip"
+./script/install_update.sh "dist/release/Live Wallpapers for Mac-0.2.0.zip"
 ```
 
 ## TCC Stability Rules

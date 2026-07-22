@@ -11,7 +11,11 @@ System requirement: macOS 13 or later.
 
 Updating
 
-To update, open the new DMG and drag the app to Applications again, replacing the previous version. Do not rename the app or move it to another folder. Its stable name, path, Bundle ID and signature allow macOS to recognize an update as the same app and preserve granted permissions.
+Versions earlier than 0.2.0 require one manual update: open the new DMG and drag the app to Applications again, replacing the previous version.
+
+Starting with 0.2.0, use Check for Updates in the app menu. The new version is downloaded, verified, installed and relaunched automatically. Installation stops if the signature or checksum verification fails.
+
+Do not rename the app or move it to another folder. Its stable name, path, Bundle ID and signature allow macOS to recognize an update as the same app and preserve granted permissions.
 
 Official updates:
 https://github.com/medusa4111/LiveWallpapersForMac/releases
