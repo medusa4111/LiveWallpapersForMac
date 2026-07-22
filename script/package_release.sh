@@ -25,6 +25,9 @@ EXPECTED_CERT_SHA1="$BASELINE_DIR/certificate-sha1.txt"
 CURRENT_REQUIREMENT="$RELEASE_DIR/designated-requirement.txt"
 CURRENT_CERT_SHA1="$RELEASE_DIR/certificate-sha1.txt"
 ZIP_PATH="$RELEASE_DIR/$APP_NAME-$VERSION.zip"
+DMG_PATH="$RELEASE_DIR/$APP_NAME-$VERSION.dmg"
+DMG_STAGING_DIR="$RELEASE_DIR/dmg-staging"
+DMG_VOLUME_NAME="Live Wallpapers $VERSION"
 
 fail() {
   echo "error: $*" >&2
@@ -143,13 +146,51 @@ verify_bundle_invariants
 extract_signature_facts
 compare_or_initialize_baseline
 
-rm -f "$ZIP_PATH" "$ZIP_PATH.sha256"
+rm -f "$ZIP_PATH" "$ZIP_PATH.sha256" "$DMG_PATH" "$DMG_PATH.sha256"
 (
   cd "$RELEASE_DIR"
   /usr/bin/ditto -c -k --keepParent "$APP_NAME.app" "$ZIP_PATH"
   /usr/bin/shasum -a 256 "$(basename "$ZIP_PATH")" >"$ZIP_PATH.sha256"
 )
 
+rm -rf "$DMG_STAGING_DIR"
+mkdir -p "$DMG_STAGING_DIR"
+/usr/bin/ditto "$APP_BUNDLE" "$DMG_STAGING_DIR/$APP_NAME.app"
+ln -s /Applications "$DMG_STAGING_DIR/Applications"
+cp "$ROOT_DIR/INSTALL_RU.txt" "$DMG_STAGING_DIR/Установка — прочитайте.txt"
+cp "$ROOT_DIR/INSTALL_EN.txt" "$DMG_STAGING_DIR/Installation — read me.txt"
+
+/usr/bin/hdiutil create \
+  -volname "$DMG_VOLUME_NAME" \
+  -srcfolder "$DMG_STAGING_DIR" \
+  -ov \
+  -format UDZO \
+  "$DMG_PATH"
+rm -rf "$DMG_STAGING_DIR"
+
+(
+  cd "$RELEASE_DIR"
+  /usr/bin/shasum -a 256 "$(basename "$DMG_PATH")" >"$DMG_PATH.sha256"
+)
+
+DMG_MOUNT_DIR="$(/usr/bin/mktemp -d "${TMPDIR:-/tmp}/live-wallpapers-dmg.XXXXXX")"
+cleanup_dmg_mount() {
+  /usr/bin/hdiutil detach "$DMG_MOUNT_DIR" -quiet >/dev/null 2>&1 || true
+  rmdir "$DMG_MOUNT_DIR" >/dev/null 2>&1 || true
+}
+trap cleanup_dmg_mount EXIT
+
+/usr/bin/hdiutil attach "$DMG_PATH" -readonly -nobrowse -mountpoint "$DMG_MOUNT_DIR" -quiet
+DMG_APP="$DMG_MOUNT_DIR/$APP_NAME.app"
+[[ -d "$DMG_APP" ]] || fail "DMG does not contain $APP_NAME.app"
+/usr/bin/codesign --verify --deep --strict --verbose=2 "$DMG_APP"
+/usr/bin/codesign -d -r- "$DMG_APP" 2>&1 | sed -n '/^designated =>/,$p' \
+  | diff -u "$EXPECTED_REQUIREMENT" - >/dev/null \
+  || fail "application signature changed inside DMG"
+cleanup_dmg_mount
+trap - EXIT
+
 echo "release app: $APP_BUNDLE"
 echo "release zip: $ZIP_PATH"
+echo "release dmg: $DMG_PATH"
 echo "install path must stay: /Applications/$APP_NAME.app"
