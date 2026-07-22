@@ -591,7 +591,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func checkForUpdates(_ sender: Any?) {
-        AppUpdateUI.checkForUpdates()
+        AppUpdateUI.checkForUpdates(language: currentLanguage)
     }
 
     @objc private func resetSettings(_ sender: Any?) {
@@ -3521,7 +3521,7 @@ final class SettingsWindowController: NSWindowController {
     }
 
     @objc private func checkForUpdates(_ sender: Any?) {
-        AppUpdateUI.checkForUpdates()
+        AppUpdateUI.checkForUpdates(language: currentLanguage)
     }
 
     private func showMessage(title: String, message: String) {
@@ -3609,10 +3609,12 @@ struct GitHubReleaseResponse: Decodable {
     struct Asset: Decodable {
         let name: String
         let browserDownloadURL: URL
+        let digest: String?
 
         enum CodingKeys: String, CodingKey {
             case name
             case browserDownloadURL = "browser_download_url"
+            case digest
         }
     }
 
@@ -3621,6 +3623,7 @@ struct GitHubReleaseResponse: Decodable {
     let htmlURL: URL
     let prerelease: Bool
     let draft: Bool
+    let body: String?
     let assets: [Asset]
 
     enum CodingKeys: String, CodingKey {
@@ -3629,6 +3632,7 @@ struct GitHubReleaseResponse: Decodable {
         case htmlURL = "html_url"
         case prerelease
         case draft
+        case body
         case assets
     }
 }
@@ -3735,46 +3739,140 @@ enum AppUpdateChecker {
 }
 
 enum AppUpdateUI {
-    static func checkForUpdates() {
+    private static var isBusy = false
+
+    static func checkForUpdates(language: AppLanguage) {
+        guard !isBusy else {
+            return
+        }
+        isBusy = true
+
         AppUpdateChecker.check { result in
             DispatchQueue.main.async {
+                isBusy = false
                 switch result {
                 case .success(let status):
-                    show(status: status)
+                    show(status: status, language: language)
                 case .failure(let error):
-                    showError(error)
+                    showCheckError(error, language: language)
                 }
             }
         }
     }
 
-    private static func show(status: AppUpdateStatus) {
+    private static func show(status: AppUpdateStatus, language: AppLanguage) {
         let alert = NSAlert()
         switch status {
-        case .upToDate(let currentVersion, let release):
-            alert.messageText = "Обновлений нет"
-            alert.informativeText = "Установлена версия \(currentVersion). Последний релиз на GitHub: \(release.tagName)."
-            alert.addButton(withTitle: "OK")
+        case .upToDate(let currentVersion, _):
+            alert.messageText = AutomaticUpdateCopy.text("none.title", language: language)
+            alert.informativeText = AutomaticUpdateCopy.format("none.message", language: language, currentVersion)
+            alert.addButton(withTitle: AutomaticUpdateCopy.text("close", language: language))
             alert.runModal()
 
         case .updateAvailable(let currentVersion, let releaseVersion, let release):
-            let assetLine = release.assets.first.map { "\nФайл релиза: \($0.name)" } ?? ""
-            alert.messageText = "Доступно обновление \(releaseVersion)"
-            alert.informativeText = "Установлена версия \(currentVersion). Откройте GitHub Release и установите сборку через подписанный релизный архив.\(assetLine)"
-            alert.addButton(withTitle: "Открыть GitHub")
-            alert.addButton(withTitle: "Позже")
+            alert.alertStyle = .informational
+            alert.messageText = AutomaticUpdateCopy.format("available.title", language: language, releaseVersion)
+            alert.informativeText = AutomaticUpdateCopy.format("available.message", language: language, currentVersion)
+            alert.addButton(withTitle: AutomaticUpdateCopy.text("install", language: language))
+            alert.addButton(withTitle: AutomaticUpdateCopy.text("later", language: language))
             if alert.runModal() == .alertFirstButtonReturn {
-                NSWorkspace.shared.open(release.htmlURL)
+                install(release: release, version: releaseVersion, language: language)
             }
         }
     }
 
-    private static func showError(_ error: Error) {
+    private static func install(
+        release: GitHubReleaseResponse,
+        version: String,
+        language: AppLanguage
+    ) {
+        guard !isBusy else {
+            return
+        }
+        isBusy = true
+
         let alert = NSAlert()
-        alert.messageText = "Проверка обновлений не выполнена"
-        alert.informativeText = error.localizedDescription
-        alert.addButton(withTitle: "OK")
+        alert.alertStyle = .informational
+        alert.messageText = AutomaticUpdateCopy.format("progress.title", language: language, version)
+        alert.informativeText = AutomaticUpdateCopy.text("phase.download", language: language)
+
+        let spinner = NSProgressIndicator(frame: NSRect(x: 0, y: 0, width: 260, height: 18))
+        spinner.style = .bar
+        spinner.isIndeterminate = true
+        spinner.startAnimation(nil)
+        alert.accessoryView = spinner
+        let statusButton = alert.addButton(withTitle: AutomaticUpdateCopy.text("install", language: language))
+        statusButton.isEnabled = false
+
+        Task {
+            do {
+                try await AutomaticUpdateInstaller.install(
+                    release: release,
+                    expectedVersion: version,
+                    progress: { phase in
+                        DispatchQueue.main.async {
+                            alert.informativeText = phaseText(phase, language: language)
+                        }
+                    }
+                )
+            } catch {
+                DispatchQueue.main.async {
+                    isBusy = false
+                    spinner.stopAnimation(nil)
+                    if NSApp.modalWindow === alert.window {
+                        NSApp.abortModal()
+                    }
+                    DispatchQueue.main.async {
+                        showInstallError(error, release: release, language: language)
+                    }
+                }
+            }
+        }
+
         alert.runModal()
+    }
+
+    private static func phaseText(_ phase: AutomaticUpdatePhase, language: AppLanguage) -> String {
+        switch phase {
+        case .downloading:
+            return AutomaticUpdateCopy.text("phase.download", language: language)
+        case .verifying:
+            return AutomaticUpdateCopy.text("phase.verify", language: language)
+        case .preparing:
+            return AutomaticUpdateCopy.text("phase.prepare", language: language)
+        }
+    }
+
+    private static func showCheckError(_ error: Error, language: AppLanguage) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = AutomaticUpdateCopy.text("error.checkTitle", language: language)
+        alert.informativeText = error.localizedDescription
+        alert.addButton(withTitle: AutomaticUpdateCopy.text("close", language: language))
+        alert.runModal()
+    }
+
+    private static func showInstallError(
+        _ error: Error,
+        release: GitHubReleaseResponse,
+        language: AppLanguage
+    ) {
+        let message: String
+        if let updateError = error as? AutomaticUpdateError {
+            message = updateError.message(language: language)
+        } else {
+            message = error.localizedDescription
+        }
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = AutomaticUpdateCopy.text("error.installTitle", language: language)
+        alert.informativeText = message
+        alert.addButton(withTitle: AutomaticUpdateCopy.text("error.openRelease", language: language))
+        alert.addButton(withTitle: AutomaticUpdateCopy.text("close", language: language))
+        if alert.runModal() == .alertFirstButtonReturn {
+            NSWorkspace.shared.open(release.htmlURL)
+        }
     }
 }
 

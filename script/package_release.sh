@@ -8,8 +8,8 @@ EXECUTABLE_NAME="Live Wallpapers for Mac"
 MIN_SYSTEM_VERSION="13.0"
 SIGNING_IDENTITY="${SIGNING_IDENTITY:-Live Wallpapers for Mac Release Signing}"
 
-VERSION="${1:-${APP_VERSION:-0.1.0}}"
-BUILD_NUMBER="${2:-${APP_BUILD:-$(date +%Y%m%d%H%M)}}"
+VERSION="${1:-${APP_VERSION:-0.2.0}}"
+BUILD_NUMBER="${2:-${APP_BUILD:-3}}"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RELEASE_DIR="$ROOT_DIR/dist/release"
