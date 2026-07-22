@@ -1,0 +1,20 @@
+Live Wallpapers for Mac — Installation
+
+System requirement: macOS 13 or later.
+
+1. Open Live Wallpapers for Mac-<version>.dmg.
+2. Drag Live Wallpapers for Mac.app onto the Applications shortcut.
+3. If an older version is installed, confirm that it should be replaced.
+4. Open the Applications folder and launch Live Wallpapers for Mac.
+5. On first launch, macOS may block the app because it is not yet notarized by Apple. Control-click the app, choose Open, then choose Open again. If that option is unavailable, open System Settings → Privacy & Security and click Open Anyway.
+6. Grant the requested macOS permissions. The app appears in the menu bar after launch and does not show an icon in the Dock.
+
+Updating
+
+To update, open the new DMG and drag the app to Applications again, replacing the previous version. Do not rename the app or move it to another folder. Its stable name, path, Bundle ID and signature allow macOS to recognize an update as the same app and preserve granted permissions.
+
+Official updates:
+https://github.com/medusa4111/LiveWallpapersForMac/releases
+
+Creator:
+https://x.com/Bubblegumbbbbb
