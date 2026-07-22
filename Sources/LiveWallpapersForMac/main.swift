@@ -246,6 +246,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
+        let updateItem = NSMenuItem(title: t("menu.checkUpdates"), action: #selector(checkForUpdates(_:)), keyEquivalent: "")
+        updateItem.target = self
+        menu.addItem(updateItem)
+
         let settingsItem = NSMenuItem(title: t("menu.openSettings"), action: #selector(openSettings(_:)), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
@@ -972,10 +976,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let logItem = NSMenuItem(title: t("menu.openLog"), action: #selector(openLogFile(_:)), keyEquivalent: "")
         logItem.target = self
         menu.addItem(logItem)
-
-        let updateItem = NSMenuItem(title: t("menu.checkUpdates"), action: #selector(checkForUpdates(_:)), keyEquivalent: "")
-        updateItem.target = self
-        menu.addItem(updateItem)
 
         menu.addItem(.separator())
 
