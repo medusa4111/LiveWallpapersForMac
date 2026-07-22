@@ -1,0 +1,1 @@
+designated => identifier "com.medusa411.LiveWallpapersForMac" and certificate leaf = H"53ecf99bdb35769128b362b98ffac9b69654eaaf"
